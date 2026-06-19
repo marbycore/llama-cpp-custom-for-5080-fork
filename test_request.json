@@ -1,0 +1,10 @@
+{
+    "model": "any",
+    "messages": [
+        {
+            "role": "user",
+            "content": "Capital of France?"
+        }
+    ],
+    "max_tokens": 200
+}
