@@ -4,13 +4,18 @@ chcp 65001 >nul 2>&1
 title ⚡ Llama.cpp MTP Launcher — RTX 5080 Blackwell
 color 0B
 
-:: Eliminar el trailing slash de %~dp0
-set "LLAMA_DIR=%~dp0"
-if "%LLAMA_DIR:~-1%"=="\" set "LLAMA_DIR=%LLAMA_DIR:~0,-1%"
+:: Rutas Maestras
+set "LLAMA_DIR=C:\data\llama-cpp-custom"
 set "RESULT_FILE=%TEMP%\llama_launch.txt"
+set "REAL_PORT=5050"
+set "DISC_PORT=11434"
 
 :START
 cls
+:: Limpieza de procesos
+taskkill /f /im node.exe >nul 2>&1
+taskkill /f /im dns-sd.exe >nul 2>&1
+
 echo.
 echo  ╔══════════════════════════════════════════════════════════╗
 echo  ║  ⚡  Llama.cpp MTP Launcher · RTX 5080 (Blackwell)       ║
@@ -18,93 +23,70 @@ echo  ║  Optimizaciones: MTP heads (n=2) + Flash Attention 3    ║
 echo  ╚══════════════════════════════════════════════════════════╝
 echo.
 
-:: Limpiar resultado previo
 if exist "%RESULT_FILE%" del "%RESULT_FILE%"
-
-:: Abrir GUI unificada
 powershell -NoProfile -ExecutionPolicy Bypass -File "%LLAMA_DIR%\launcher_gui.ps1"
 
-:: Si no hay resultado, el usuario cerró la ventana
 if not exist "%RESULT_FILE%" (
     echo  ❌ Operación cancelada.
     timeout /t 2 >nul
     exit /b
 )
 
-:: Leer resultados del GUI
-for /f "usebackq tokens=1-6 delims=|" %%A in ("%RESULT_FILE%") do (
+:: Leer resultados
+for /f "usebackq tokens=1-7 delims=|" %%A in ("%RESULT_FILE%") do (
     set "MODEL_PATH=%%A"
     set "VAL_CTX=%%B"
     set "VAL_NGL=%%C"
     set "VAL_NP=%%D"
     set "VAL_BATCH=%%E"
     set "HERMES_CFG=%%F"
+    set "VAL_LAN=%%G"
 )
 
-:: Sincronizar con Hermes config.yaml
-for %%F in ("%MODEL_PATH%") do set "MODEL_NAME=%%~nxF"
-
-if exist "%HERMES_CFG%" (
-    echo  🔄 Sincronizando %MODEL_NAME% con Hermes...
-    powershell -NoProfile -Command "(Get-Content '%HERMES_CFG%') -replace '^model:\s*$', 'model:' -replace '^\s*default:.*', '  default: %MODEL_NAME%' -replace '^\s*context_length:.*', '  context_length: %VAL_CTX%' | Set-Content '%HERMES_CFG%'"
-) else (
-    echo  ⚠️ Salto de sincronización: Hermes config no encontrado en %HERMES_CFG%
+:: Procesar IP
+set "L_HOST=127.0.0.1"
+set "L_IP=Localhost"
+if "!VAL_LAN!"=="1" (
+    for /f "usebackq tokens=*" %%I in (`powershell -NoProfile -Command "Get-NetIPAddress -AddressFamily IPv4 | where {$_.IPAddress -like '192.*' -or $_.IPAddress -like '10.*' -or $_.IPAddress -like '172.*'} | select -ExpandProperty IPAddress -First 1"`) do set "CURRENT_IP=%%I"
+    if NOT "!CURRENT_IP!"=="" (
+        set "L_HOST=0.0.0.0"
+        set "L_IP=!CURRENT_IP!"
+        start "Blackwell-Shim" /min node "!LLAMA_DIR!\ollama_shim.js"
+    )
 )
 
-:: Construir args de batch
-set "BATCH_ARGS="
-if NOT "%VAL_BATCH%"=="Default" (
-    set "BATCH_ARGS=-ub %VAL_BATCH% -b %VAL_BATCH%"
+:: Sincronizar Hermes
+for %%F in ("!MODEL_PATH!") do set "MODEL_NAME=%%~nxF"
+if exist "!HERMES_CFG!" (
+    powershell -NoProfile -ExecutionPolicy Bypass -File "!LLAMA_DIR!\sync_hermes.ps1" -ConfigPath "!HERMES_CFG!" -ModelName "!MODEL_NAME!" -Context "!VAL_CTX!"
 )
 
-:: Lanzar servidor
+:: Argumentos de Batch
+set "B_ARGS="
+if NOT "!VAL_BATCH!"=="Default" (set "B_ARGS=-ub !VAL_BATCH! -b !VAL_BATCH!")
+
+:: Banner Final
 cls
 color 0B
 echo.
 echo  ╔══════════════════════════════════════════════════════════╗
-echo  ║  🚀  LLAMA-SERVER MTP ACTIVO · RTX 5080 (Blackwell)    ║
+echo  ║  🚀  BLACKWELL MTP ACTIVO · RTX 5080 (Blackwell)         ║
 echo  ║──────────────────────────────────────────────────────────║
-echo  ║  Modelo  : %MODEL_NAME%
-echo  ║  MTP     : draft-mtp (n=2)                               ║
-echo  ║  Contexto: %VAL_CTX% tokens
-echo  ║  Layers  : %VAL_NGL% ^| Slots: %VAL_NP% ^| KV: Q4_0
+echo  ║  Modelo   : !MODEL_NAME!
+echo  ║  IP LAN   : !L_IP!
+echo  ║  Puerto   : !REAL_PORT! (Discovery en !DISC_PORT!)
+echo  ║  MTP      : draft-mtp (n=2)
+echo  ║──────────────────────────────────────────────────────────║
+echo  ║  TIP: El iPhone ya deberia detectar el servidor.         ║
 echo  ╚══════════════════════════════════════════════════════════╝
 echo.
 
-cd /d "%LLAMA_DIR%"
-
-echo  [DEBUG] Preparando motor Blackwell sm_120a...
-echo  [DEBUG] Comando: build\bin\llama-server.exe -m "%MODEL_PATH%" --flash-attn on -ngl %VAL_NGL% -c %VAL_CTX% -np %VAL_NP% -ctk q4_0 -ctv q4_0 %BATCH_ARGS% --spec-type draft-mtp --spec-draft-n-max 2 --host 0.0.0.0 --port 5050 --jinja
-echo.
-echo  Presiona cualquier tecla para INICIAR el servidor experimental...
-pause >nul
-
-build\bin\llama-server.exe ^
-  -m "%MODEL_PATH%" ^
-  --flash-attn on ^
-  -ngl %VAL_NGL% ^
-  -c %VAL_CTX% ^
-  -np %VAL_NP% ^
-  -ctk q4_0 ^
-  -ctv q4_0 ^
-  %BATCH_ARGS% ^
-  --spec-type draft-mtp ^
-  --spec-draft-n-max 2 ^
-  --host 0.0.0.0 ^
-  --port 5050 ^
-  --jinja
+cd /d "!LLAMA_DIR!"
+build\bin\llama-server.exe -m "!MODEL_PATH!" --flash-attn on -ngl !VAL_NGL! -c !VAL_CTX! -np !VAL_NP! -ctk q4_0 -ctv q4_0 !B_ARGS! --spec-type draft-mtp --spec-draft-n-max 2 --host !L_HOST! --port !REAL_PORT! --jinja
 
 if %errorlevel% neq 0 (
     echo.
-    echo  [!] ERROR CRITICO: El servidor se ha detenido (Code: %errorlevel%).
-    echo  [!] CAUSA PROBABLE: El modelo elegido NO contiene cabezales MTP.
-    echo  [!] SOLUCION: Usa el modelo IQ3_XXS (MTP version) para este lanzador.
-    echo.
+    echo [!] Error de motor MTP.
     pause
 )
-
-echo.
-echo  ────────────────────────────────────────────────────────────
-echo  Servidor detenido. Volviendo al selector en 3s...
-timeout /t 3
 goto START
