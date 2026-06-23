@@ -145,11 +145,16 @@ $cGpu = New-Setting "GPU Layers (-ngl)" 240 @("99 - Max FPS", "60 - Balanced", "
 $cPar = New-Setting "Parallel Slots (-np)" 465 @("1 - Solo Yo", "2 - Con Hermes", "4 - Multi") 0 "Sesiones simultaneas"
 $cBat = New-Setting "uBatch Size" 690 @("Default", "1024", "2048", "4096") 0 "Velocidad Blackwell"
 
-# ── Opción LAN (Estilo DeepSkyBlue) ──
+# ── Opción LAN y Tavily ──
 $chkLan = New-Object Windows.Forms.CheckBox
 $chkLan.Text = "EXPONER SERVIDOR EN RED LOCAL (LAN)"; $chkLan.Checked = $EXPOSE_LAN
 $chkLan.Location = New-Object Drawing.Point(20, 175); $chkLan.AutoSize = $true; $chkLan.ForeColor = [Drawing.Color]::DeepSkyBlue
 $chkLan.Font = New-Object Drawing.Font("Segoe UI", 9, [Drawing.FontStyle]::Bold); $pnl.Controls.Add($chkLan)
+
+$chkTavily = New-Object Windows.Forms.CheckBox
+$chkTavily.Text = "TAVILY WEB SEARCH (MCP)"; $chkTavily.Checked = $false
+$chkTavily.Location = New-Object Drawing.Point(350, 175); $chkTavily.AutoSize = $true; $chkTavily.ForeColor = [Drawing.Color]::Cyan
+$chkTavily.Font = New-Object Drawing.Font("Segoe UI", 9, [Drawing.FontStyle]::Bold); $pnl.Controls.Add($chkTavily)
 
 # ── Botón Lanzar (Maximum Impact) ──
 $btn = New-Object Windows.Forms.Button
@@ -165,7 +170,8 @@ $btn.Add_Click({
         $modelPath = $dgv.SelectedRows[0].Cells[3].Value
         $ctx = $cCtx.SelectedItem.Split(" ")[0]; $ngl = $cGpu.SelectedItem.Split(" ")[0]; $np = $cPar.SelectedItem.Split(" ")[0]; $ub = $cBat.SelectedItem.Split(" ")[0]
         $lan = if ($chkLan.Checked) { "1" }else { "0" }
-        $line = "$modelPath|$ctx|$ngl|$np|$ub|$($txtHermes.Text)|$lan"
+        $tavily = if ($chkTavily.Checked) { "1" }else { "0" }
+        $line = "$modelPath|$ctx|$ngl|$np|$ub|$($txtHermes.Text)|$lan|$tavily"
         [System.IO.File]::WriteAllText($RESULT_FILE, $line)
         $form.DialogResult = [Windows.Forms.DialogResult]::OK; $form.Close()
     })
