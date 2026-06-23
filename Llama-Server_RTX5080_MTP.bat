@@ -4,7 +4,9 @@ chcp 65001 >nul 2>&1
 title ⚡ Llama.cpp MTP Launcher — RTX 5080 Blackwell
 color 0B
 
-set "LLAMA_DIR=C:\data\llama-cpp-custom"
+:: Eliminar el trailing slash de %~dp0
+set "LLAMA_DIR=%~dp0"
+if "%LLAMA_DIR:~-1%"=="\" set "LLAMA_DIR=%LLAMA_DIR:~0,-1%"
 set "RESULT_FILE=%TEMP%\llama_launch.txt"
 
 :START
@@ -30,19 +32,24 @@ if not exist "%RESULT_FILE%" (
 )
 
 :: Leer resultados del GUI
-for /f "usebackq tokens=1-5 delims=|" %%A in ("%RESULT_FILE%") do (
+for /f "usebackq tokens=1-6 delims=|" %%A in ("%RESULT_FILE%") do (
     set "MODEL_PATH=%%A"
     set "VAL_CTX=%%B"
     set "VAL_NGL=%%C"
     set "VAL_NP=%%D"
     set "VAL_BATCH=%%E"
+    set "HERMES_CFG=%%F"
 )
 
 :: Sincronizar con Hermes config.yaml
-set "HERMES_CFG=C:\data\hermes\hermes-tui\data\config.yaml"
 for %%F in ("%MODEL_PATH%") do set "MODEL_NAME=%%~nxF"
 
-powershell -NoProfile -Command "(Get-Content '%HERMES_CFG%') -replace '^model:\s*$', 'model:' -replace '^\s*default:.*', '  default: %MODEL_NAME%' -replace '^\s*context_length:.*', '  context_length: %VAL_CTX%' | Set-Content '%HERMES_CFG%'"
+if exist "%HERMES_CFG%" (
+    echo  🔄 Sincronizando %MODEL_NAME% con Hermes...
+    powershell -NoProfile -Command "(Get-Content '%HERMES_CFG%') -replace '^model:\s*$', 'model:' -replace '^\s*default:.*', '  default: %MODEL_NAME%' -replace '^\s*context_length:.*', '  context_length: %VAL_CTX%' | Set-Content '%HERMES_CFG%'"
+) else (
+    echo  ⚠️ Salto de sincronización: Hermes config no encontrado en %HERMES_CFG%
+)
 
 :: Construir args de batch
 set "BATCH_ARGS="

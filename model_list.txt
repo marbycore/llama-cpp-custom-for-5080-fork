@@ -2,5 +2,6 @@ Qwen_Qwen3.5-4B-Q4_K_S.gguf
 Qwen_Qwen3.5-4B-Q6_K_L.gguf
 Qwen3.5-9B-Uncensored-HauhauCS-Aggressive-Q6_K.gguf
 Qwen3.6-35B-A3B-Uncensored-HauhauCS-Aggressive-Q4_K_M.gguf
+Qwen3.5-9B-IQ4_NL.gguf
 Qwen3.6-35B-A3B-UD-IQ3_XXS.gguf
 Qwen3.6-35B-A3B-UD-IQ3_S.gguf

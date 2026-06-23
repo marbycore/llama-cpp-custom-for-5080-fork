@@ -163,6 +163,55 @@ Para esta prueba no se usó un comando trivial, sino una solicitud de arquitectu
 
 ---
 
+### **[2022-06-22 13:13] - Comparativa Final de Cuantización: Qwen 3.5 9B (Dense)**
+*   **Hito:** Matriz de decisión entre Fidelidad, Productividad y Lógica funcional.
+
+#### 📊 Resultados Comparativos Qwen 3.5 9B Dense
+| Métrica | Q6_K_XL (Fidelidad) | IQ4_NL (Lógica) | **Q8_0 (Velocidad)** | Notas de Ingeniería |
+| :--- | :--- | :--- | :--- | :--- |
+| **Prefill Speed** | 2,743.97 t/s | **3,309.75 t/s** | 3,193.01 t/s | IQ4_NL domina la carga inicial. |
+| **Generación (Peak)** | 100.59 t/s | **125.01 t/s** | 98.56 t/s | El Q8_0 es extrañamente más lento en flujo. |
+| **MTP (Acceptance)** | 87.1% | **93.2%** | 92.9% | MTP muy estable en todos los modelos. |
+| **Tiempo Tarea Web** | 8:00 min | 3:29 min | **3:00 min** ⚡ | El Q8_0 termina antes, pero... |
+| **Calidad de Salida** | ⭐⭐⭐⭐ (Alta) | ⭐⭐⭐⭐⭐ (Top) | ⭐⭐ (Pobre) | **Paradoja:** A mayor peso (Q8), peor lógica. |
+
+#### 📂 Observaciones Finales de Producción
+- **🏆 Ganador (IQ4_NL):** El mejor equilibrio entre velocidad real y lógica de programación. Es el modelo "inteligente" por excelencia para la serie 50.
+- **⚠️ El Fiasco del Q8_0:** Aunque termina la tarea en 3 minutos, el código resultante es de baja calidad. Esto sugiere que las estructuras de atención de Qwen no se benefician de cuantizaciones lineales pesadas en 8-bit.
+- **🎨 Q6_K_XL:** Se mantiene como la opción para diseño visual puro donde el tiempo no sea crítico.
+
+#### ⚙️ Configuración Técnica Global
+- **GPU:** RTX 5080 (sm_120a).
+- **Driver:** CUDA 13.1 Native.
+- **MTP:** Habilitado en todos los tests (n=2).
+
+> [!CAUTION]
+> **Conclusión técnica definitiva:** No te dejes engañar por los 8-bits. En la RTX 5080, el motor Blackwell vuela con cuantizaciones **IQ4_NL**. Has ahorrado 5 minutos de desarrollo por cada tarea eligiendo el modelo correcto.
+
+---
+
+---
+
+### **[2022-06-23 13:04] - Benchmarks de Baja Latencia: Qwen 3.5 4B**
+*   **Hito:** Rompiendo la barrera de los 5,000 t/s de prefill en Blackwell.
+
+#### 📊 Resultados Comparativos Qwen 3.5 4B
+| Métrica | Q4_K_S (Estándar) | IQ4_NL (MTP Unsloth) | Notas de Ingeniería |
+| :--- | :--- | :--- | :--- |
+| **Prefill Speed** | **5,061.29 t/s** ⚡ | ~5,000 t/s | Carga instantánea de contextos masivos. |
+| **Generación (Peak)** | **123.72 t/s** | ~120.00 t/s | Velocidades muy similares en ambos. |
+| **Generación (Avg)** | **100.00 - 110.00 t/s** | ~100.00 t/s | Caída leve en contextos +40k tokens. |
+| **MTP Acceptance** | N/A (Server Std) | **~90%** (MTP) | El MTP no aportó ventaja real de velocidad. |
+| **Calidad Lógica** | ⭐⭐⭐⭐ (Sólida) | ⭐ (Errática) | **Fallo Crítico:** IQ4_NL es inusable en 4B. |
+
+#### 📂 Observaciones Críticas de Ingeniería
+- **🚀 Prefill de Élite:** La RTX 5080 demuestra que con modelos de 4B, la carga de prompt es virtualmente inexistente (5.2k t/s). Es ideal para sistemas de búsqueda RAG intensivos.
+- **⚠️ El Límite del IQ4_NL:** A diferencia del modelo 9B, la arquitectura 4B parece no tolerar la cuantización Non-Linear. La pérdida de coherencia es total, sugiriendo que el modelo es "demasiado pequeño" para ser comprimido agresivamente sin romper sus pesos de atención.
+- **Anomalía MTP:** En esta escala (4B), el soporte de MTP no se traduce en un aumento de t/s perceptible sobre una ejecución estándar optimizada, pero sí degrada la calidad si no se usa el balance correcto.
+
+> [!WARNING]
+> **Recomendación para 4B:** Utilizar **Q4_K_S** o superiores. Evitar versiones IQ4_NL/MTP si la prioridad es la precisión lógica. El 4B es el rey de la velocidad de carga, pero requiere cuantizaciones tradicionales para mantener su "cordura".
+
 ## ⚠️ Advertencia: El Fracaso del modelo 27B (Dense vs MoE)
 *Registro de pruebas fallidas para evitar regresiones de rendimiento.*
 

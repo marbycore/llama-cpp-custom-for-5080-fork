@@ -2,9 +2,20 @@
 # Modo normal: abre Out-GridView para selección visual
 # Modo test:   auto-selecciona el primer modelo y lo devuelve
 param(
-    [string]$ModelRoot = "$env:USERPROFILE\.lmstudio\models",
-    [switch]$AutoSelect  # Para testing automatizado
+    [string]$ModelRoot,
+    [switch]$AutoSelect
 )
+
+# Cargar configuración si existe
+$CONFIG_PATH = Join-Path $PSScriptRoot "config_server.json"
+if (-not $ModelRoot -and (Test-Path $CONFIG_PATH)) {
+    try {
+        $config = Get-Content $CONFIG_PATH | ConvertFrom-Json
+        $ModelRoot = $config.ModelRoot
+    }
+    catch {}
+}
+if (-not $ModelRoot) { $ModelRoot = "$env:USERPROFILE\.lmstudio\models" }
 
 $models = Get-ChildItem -Path $ModelRoot -Filter '*.gguf' -Recurse | Where-Object { $_.Name -notmatch 'mmproj' }
 
